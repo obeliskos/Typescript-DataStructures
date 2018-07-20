@@ -38,7 +38,7 @@ interface ITreeNodeHash<K, T> {
  * https://github.com/williamfiset/data-structures/blob/master/com/williamfiset/datastructures/balancedtree/AVLTreeRecursive.java
  * https://www.youtube.com/watch?v=g4y2h70D6Nk&list=PLDV1Zeh2NRsD06x59fxczdWLhDDszUHKt
  */
-class BinaryTreeIndex<T> implements IRangedIndex<T> {
+class AvlIndex<T> implements IRangedIndex<T> {
    name: string;
    comparator: IRangedComparer<T>;
    nodes: ITreeNodeHash<T> = {};
@@ -52,14 +52,14 @@ class BinaryTreeIndex<T> implements IRangedIndex<T> {
       this.comparator = comparator;
    }
 
-   backup(): BinaryTreeIndex<T> {
-      let result = new BinaryTreeIndex<T>(this.name, this.comparator);
+   backup(): AvlIndex<T> {
+      let result = new AvlIndex<T>(this.name, this.comparator);
       result.nodes = JSON.parse(JSON.stringify(this.nodes));
       result.apex = this.apex;
       return result;
    }
 
-   restore(tree: BinaryTreeIndex<T>) {
+   restore(tree: AvlIndex<T>) {
       this.name = tree.name;
       this.comparator = tree.comparator;
       this.nodes = JSON.parse(JSON.stringify(tree.nodes));

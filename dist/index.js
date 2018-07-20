@@ -275,7 +275,7 @@ interface ITreeNodeHash<K, T> {
  * https://github.com/williamfiset/data-structures/blob/master/com/williamfiset/datastructures/balancedtree/AVLTreeRecursive.java
  * https://www.youtube.com/watch?v=g4y2h70D6Nk&list=PLDV1Zeh2NRsD06x59fxczdWLhDDszUHKt
  */
-class BinaryTreeIndex {
+class AvlIndex {
     /**
      * Initializes index with property name and a comparer function.
      */
@@ -286,7 +286,7 @@ class BinaryTreeIndex {
         this.comparator = comparator;
     }
     backup() {
-        let result = new BinaryTreeIndex(this.name, this.comparator);
+        let result = new AvlIndex(this.name, this.comparator);
         result.nodes = JSON.parse(JSON.stringify(this.nodes));
         result.apex = this.apex;
         return result;
@@ -1108,7 +1108,7 @@ let ComparatorMap = {
 };
 /* global rangedIndex factory hashmap */
 let RangedIndexFactoryMap = {
-    "avl": (name, comparator) => { return new BinaryTreeIndex(name, comparator); }
+    "avl": (name, comparator) => { return new AvlIndex(name, comparator); }
 };
 function CreateJavascriptComparator() {
     return {
@@ -1162,6 +1162,36 @@ class Benchmark {
         else {
             console.log("run with --expose-gc flag for more accurate results");
         }
+    }
+    profileLookups(count) {
+        this.cleanup();
+        let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
+        let start, end;
+        let totalTimes = [];
+        let totalMS = 0.0;
+        let rnd = "";
+        let valbuf = [];
+        for (let idx = 1; idx <= count; idx++) {
+            rnd = this.generateRandomString();
+            index.insert(idx, rnd);
+            valbuf.push(rnd);
+        }
+        //valbuf = this.shuffle(valbuf);
+        let result = [];
+        for (let idx = 0; idx < count; idx++) {
+            start = process.hrtime();
+            result = index.rangeRequest({ op: "$eq", val: valbuf[idx] });
+            end = process.hrtime(start);
+            totalTimes.push(end);
+            if (result.length !== 1) {
+                throw new Error("Did not find previously inserted value");
+            }
+        }
+        for (var idx = 0; idx < totalTimes.length; idx++) {
+            totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
+        }
+        let rate = count * 1000 / totalMS;
+        console.log("rangeRequest (lookups) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
     }
     profileInsertion(count) {
         this.cleanup();
@@ -1246,11 +1276,12 @@ function execSteps(steps) {
     if (!s)
         return;
     s();
-    setTimeout(() => { execSteps(steps); }, 1000);
+    setTimeout(() => { execSteps(steps); }, 1);
 }
 var bench = new Benchmark();
 let steps = [
     () => bench.cleanup(),
+    () => bench.profileLookups(100000),
     () => bench.profileInsertion(100000),
     () => bench.profileUpdates(100000),
     () => bench.profileRemoves(100000)

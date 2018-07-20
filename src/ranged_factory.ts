@@ -1,11 +1,8 @@
 /**
- * Rough, Initial interfaces for creation of various implementations of ranged indexes.
- * Not sure how these might change or where they might be relocated to.
+ * Ranged Index Factory and Comparator registry.
  */
 
-/* import { BinaryTreeIndex } from "./btree_index"; */
-
-/* global (for now) comparator hashmap... static registry rather than factory */
+/* global comparator hashmap... static registry rather than factory */
 let ComparatorMap: IComparatorMap = {
    "js": CreateJavascriptComparator<any>(),
    "abstract": CreateAbstractComparator()
@@ -13,7 +10,7 @@ let ComparatorMap: IComparatorMap = {
 
 /* global rangedIndex factory hashmap */
 let RangedIndexFactoryMap: IRangedIndexFactoryMap = {
-   "avl": (name: string, comparator: IRangedComparer<any>) => { return new BinaryTreeIndex(name, comparator); }
+   "avl": (name: string, comparator: IRangedComparer<any>) => { return new AvlIndex(name, comparator); }
 };
 
 function CreateJavascriptComparator<T>(): IRangedComparer<T> {
