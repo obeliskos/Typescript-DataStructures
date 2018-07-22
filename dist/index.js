@@ -1097,11 +1097,9 @@ class AvlIndex {
     }
 }
 /**
- * Rough, Initial interfaces for creation of various implementations of ranged indexes.
- * Not sure how these might change or where they might be relocated to.
+ * Ranged Index Factory and Comparator registry.
  */
-/* import { BinaryTreeIndex } from "./btree_index"; */
-/* global (for now) comparator hashmap... static registry rather than factory */
+/* global comparator hashmap... static registry rather than factory */
 let ComparatorMap = {
     "js": CreateJavascriptComparator(),
     "abstract": CreateAbstractComparator()
@@ -1138,6 +1136,9 @@ let crypt = require("crypto"); // for less 'leaky' random string generation
 class Benchmark {
     constructor() {
     }
+    /**
+     * Generate random string using node 'cryto' library for less memory 'leaky' string generation
+     */
     generateRandomString() {
         return crypt.randomBytes(50).toString('hex');
     }
@@ -1155,6 +1156,9 @@ class Benchmark {
         }
         return array;
     }
+    /**
+     * Garbage collection to run between benchmarks
+     */
     cleanup() {
         if (global.gc) {
             global.gc();
@@ -1163,8 +1167,11 @@ class Benchmark {
             console.log("run with --expose-gc flag for more accurate results");
         }
     }
-    profileLookups(count) {
-        this.cleanup();
+    /**
+     * Benchmark single object (string value) lookups from our avl index
+     * @param count
+     */
+    profileStringLookups(count) {
         let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
         let start, end;
         let totalTimes = [];
@@ -1191,10 +1198,47 @@ class Benchmark {
             totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
         }
         let rate = count * 1000 / totalMS;
-        console.log("rangeRequest (lookups) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
+        console.log("rangeRequest lookups (string value) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
     }
-    profileInsertion(count) {
-        this.cleanup();
+    /**
+     * Benchmark single object (number value) lookups from our avl index
+     * @param count
+     */
+    profileNumberLookups(count) {
+        let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
+        let start, end;
+        let totalTimes = [];
+        let totalMS = 0.0;
+        let rnd;
+        let valbuf = [];
+        // insert into index
+        for (let idx = 1; idx <= count; idx++) {
+            rnd = count - idx;
+            index.insert(idx, rnd);
+            valbuf.push(rnd);
+        }
+        //valbuf = this.shuffle(valbuf);
+        let result = [];
+        for (let idx = 0; idx < count; idx++) {
+            start = process.hrtime();
+            result = index.rangeRequest({ op: "$eq", val: valbuf[idx] });
+            end = process.hrtime(start);
+            totalTimes.push(end);
+            if (result.length !== 1) {
+                throw new Error("Did not find previously inserted value");
+            }
+        }
+        for (var idx = 0; idx < totalTimes.length; idx++) {
+            totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
+        }
+        let rate = count * 1000 / totalMS;
+        console.log("rangeRequest lookups (number value) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
+    }
+    /**
+     * Benchmark insert rates with string values
+     * @param count
+     */
+    profileStringInsertion(count) {
         let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
         let start, end;
         let totalTimes = [];
@@ -1211,10 +1255,36 @@ class Benchmark {
             totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
         }
         let rate = count * 1000 / totalMS;
-        console.log("load (individual inserts) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
+        console.log("insert (string value) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
     }
-    profileUpdates(count) {
-        this.cleanup();
+    /**
+     * Benchmark insert rates with number values
+     * @param count
+     */
+    profileNumberInsertion(count) {
+        let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
+        let start, end;
+        let totalTimes = [];
+        let totalMS = 0.0;
+        let rnd;
+        for (let idx = 1; idx <= count; idx++) {
+            rnd = count - idx;
+            start = process.hrtime();
+            index.insert(idx, rnd);
+            end = process.hrtime(start);
+            totalTimes.push(end);
+        }
+        for (var idx = 0; idx < totalTimes.length; idx++) {
+            totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
+        }
+        let rate = count * 1000 / totalMS;
+        console.log("insert (number value) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
+    }
+    /**
+     * Benchmark update rates with string values
+     * @param count
+     */
+    profileStringUpdates(count) {
         let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
         let start, end;
         let totalTimes = [];
@@ -1239,10 +1309,44 @@ class Benchmark {
             totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
         }
         let rate = count * 1000 / totalMS;
-        console.log("update : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
+        console.log("update (string value) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
     }
-    profileRemoves(count) {
-        this.cleanup();
+    /**
+     * Benchmark update rates with number values
+     * @param count
+     */
+    profileNumberUpdates(count) {
+        let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
+        let start, end;
+        let totalTimes = [];
+        let totalMS = 0.0;
+        let rnd;
+        // initial insertion
+        for (let idx = 0; idx < count; idx++) {
+            rnd = count - idx;
+            index.insert(idx + 1, rnd);
+        }
+        let idbuf = index.rangeRequest();
+        idbuf = this.shuffle(idbuf);
+        let newValue;
+        for (let idx = 0; idx < count; idx++) {
+            newValue = count * 2 - idx;
+            start = process.hrtime();
+            index.update(idbuf[idx], newValue);
+            end = process.hrtime(start);
+            totalTimes.push(end);
+        }
+        for (var idx = 0; idx < totalTimes.length; idx++) {
+            totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
+        }
+        let rate = count * 1000 / totalMS;
+        console.log("update (number value) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
+    }
+    /**
+     * Benchmark removal rates with string values
+     * @param count
+     */
+    profileStringRemoves(count) {
         let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
         let start, end;
         let totalTimes = [];
@@ -1265,9 +1369,42 @@ class Benchmark {
             totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
         }
         let rate = count * 1000 / totalMS;
-        console.log("remove : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
+        console.log("remove (string value) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
+    }
+    /**
+     * Benchmark removal rates with number values
+     * @param count
+     */
+    profileNumberRemoves(count) {
+        let index = RangedIndexFactoryMap["avl"]("last", ComparatorMap["js"]);
+        let start, end;
+        let totalTimes = [];
+        let totalMS = 0.0;
+        let rnd;
+        // initial insertion
+        for (let idx = 0; idx < count; idx++) {
+            rnd = count - idx;
+            index.insert(idx + 1, rnd);
+        }
+        let idbuf = index.rangeRequest();
+        idbuf = this.shuffle(idbuf);
+        for (let idx = 0; idx < count; idx++) {
+            start = process.hrtime();
+            index.remove(idbuf[idx]);
+            end = process.hrtime(start);
+            totalTimes.push(end);
+        }
+        for (var idx = 0; idx < totalTimes.length; idx++) {
+            totalMS += totalTimes[idx][0] * 1e3 + totalTimes[idx][1] / 1e6;
+        }
+        let rate = count * 1000 / totalMS;
+        console.log("remove (number value) : " + totalMS.toFixed(2) + "ms (" + rate.toFixed(2) + ") ops/s (" + count + " documents)");
     }
 }
+/**
+ * Asynchronously run each benchmark
+ * @param steps
+ */
 function execSteps(steps) {
     if (steps.length === 0) {
         return;
@@ -1281,10 +1418,21 @@ function execSteps(steps) {
 var bench = new Benchmark();
 let steps = [
     () => bench.cleanup(),
-    () => bench.profileLookups(100000),
-    () => bench.profileInsertion(100000),
-    () => bench.profileUpdates(100000),
-    () => bench.profileRemoves(100000)
+    () => bench.profileNumberLookups(100000),
+    () => bench.cleanup(),
+    () => bench.profileNumberInsertion(100000),
+    () => bench.cleanup(),
+    () => bench.profileNumberUpdates(100000),
+    () => bench.cleanup(),
+    () => bench.profileNumberRemoves(100000),
+    () => bench.cleanup(),
+    () => bench.profileStringLookups(100000),
+    () => bench.cleanup(),
+    () => bench.profileStringInsertion(100000),
+    () => bench.cleanup(),
+    () => bench.profileStringUpdates(100000),
+    () => bench.cleanup(),
+    () => bench.profileStringRemoves(100000)
 ];
 execSteps(steps);
 //# sourceMappingURL=index.js.map
