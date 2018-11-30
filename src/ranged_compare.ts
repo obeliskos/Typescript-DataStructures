@@ -24,13 +24,15 @@ interface IRangedIndexFactoryMap {
    [name: string]: (name: string, comparator: IRangedComparer<any>) => IRangedIndex<any>;
 }
 
+type RangedIndexer = string | number;
+
 interface IRangedIndex<T> {
-   insert(id: number, val: T): void;
-   update(id: number, val: T): void;
-   remove(id: number): void;
+   insert(id: RangedIndexer, val: T): void;
+   update(id: RangedIndexer, val: T): void;
+   remove(id: RangedIndexer): void;
    restore(tree: any): void;
 
-   rangeRequest(range?: IRangedIndexRequest<T>): number[];
+   rangeRequest(range?: IRangedIndexRequest<T>): RangedIndexer[];
 
    validateIndex(): boolean;
 }

@@ -68,7 +68,7 @@ class Benchmark {
 
       //valbuf = this.shuffle(valbuf);
 
-      let result: number[] = [];
+      let result: RangedIndexer[] = [];
 
       for (let idx = 0; idx < count; idx++) {
          start = process.hrtime();
@@ -109,7 +109,7 @@ class Benchmark {
 
       //valbuf = this.shuffle(valbuf);
 
-      let result: number[] = [];
+      let result: RangedIndexer[] = [];
 
       for (let idx = 0; idx < count; idx++) {
          start = process.hrtime();

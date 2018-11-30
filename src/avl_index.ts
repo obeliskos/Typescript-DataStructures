@@ -1,8 +1,6 @@
 /* import { ILokiRangedComparer, IRangedIndex, IRangedIndexRequest } from "./helper";*/
 /// <reference path="./ranged_compare.ts"/>
 
-type TreeIndexer = string | number;
-
 /**
  * Treenode type for binary search tree (BST) implementation.
  * 
@@ -11,19 +9,19 @@ type TreeIndexer = string | number;
  * node represented in tree.
  */
 type TreeNode<T> = {
-   id: number,
+   id: RangedIndexer,
    value: T,
-   parent: number | null,
+   parent: RangedIndexer | null,
    balance: number,
    height: number,
-   left: number | null,
-   right: number | null,
-   siblings: number[]
+   left: RangedIndexer | null,
+   right: RangedIndexer | null,
+   siblings: RangedIndexer[]
 };
 
 /* using indexer than than Map since Map is not serializable. 'id' is document id (such as $loki) */
 interface ITreeNodeHash<T> {
-   [id: number]: TreeNode<T>;
+   [id: string]: TreeNode<T>;
 }
 
 /*
@@ -42,7 +40,7 @@ class AvlIndex<T> implements IRangedIndex<T> {
    name: string;
    comparator: IRangedComparer<T>;
    nodes: ITreeNodeHash<T> = {};
-   apex: number | null = null;
+   apex: string | number | null = null;
 
    /**
     * Initializes index with property name and a comparer function.
@@ -71,7 +69,7 @@ class AvlIndex<T> implements IRangedIndex<T> {
     * @param id Unique Id (such as $loki) to associate with value
     * @param val Value to be indexed and inserted into binary tree
     */
-   insert(id: number, val: T) {
+   insert(id: RangedIndexer, val: T) {
       if (id <= 0) {
          throw new Error("avl index ids are required to be numbers greater than zero");
       }
@@ -365,7 +363,7 @@ class AvlIndex<T> implements IRangedIndex<T> {
     * @param node
     * @param val
     */
-   private removeNode(node: TreeNode<T>, id: number) {
+   private removeNode(node: TreeNode<T>, id: RangedIndexer) {
       if (!this.nodes[id]) {
          throw new Error("removeNode: attempting to remove a node which is not in hashmap");
       }
@@ -512,7 +510,7 @@ class AvlIndex<T> implements IRangedIndex<T> {
     * @param oldChildId
     * @param newChildId
     */
-   private updateChildLink(parentId: number | null, oldChildId: number, newChildId: number | null) {
+   private updateChildLink(parentId: RangedIndexer | null, oldChildId: RangedIndexer, newChildId: RangedIndexer | null) {
       if (parentId === null) return;
 
       let parent = this.nodes[parentId];
@@ -563,9 +561,9 @@ class AvlIndex<T> implements IRangedIndex<T> {
       }
 
       let successor: TreeNode<T> | null = null;
-      let glsId: number;
+      let glsId: RangedIndexer;
       let glsValue: T;
-      let glsSiblings: number[];
+      let glsSiblings: RangedIndexer[];
 
       // if tree is already left heavy,
       // let's replace with predecessor (greatest val in left branch)
@@ -649,7 +647,7 @@ class AvlIndex<T> implements IRangedIndex<T> {
     *  Interface method to support ranged queries.  Results sorted by index property.
     * @param range Options for ranged request.
     */
-   rangeRequest(range?: IRangedIndexRequest<T>): number[] {
+   rangeRequest(range?: IRangedIndexRequest<T>): RangedIndexer[] {
       if (!this.apex) return [];
 
       // if requesting all id's sorted by their value
@@ -680,8 +678,8 @@ class AvlIndex<T> implements IRangedIndex<T> {
     * @param node
     * @param range
     */
-   private collateRequest(node: TreeNode<T>, range: IRangedIndexRequest<T>): number[] {
-      let result: number[] = [];
+   private collateRequest(node: TreeNode<T>, range: IRangedIndexRequest<T>): RangedIndexer[] {
+      let result: RangedIndexer[] = [];
 
       if (range.op === "$eq") {
          // we use locate instead for $eq range requests
@@ -798,8 +796,8 @@ class AvlIndex<T> implements IRangedIndex<T> {
     * Used on a branch node to return an array of id within that branch, sorted by their value
     * @param node
     */
-   private collateIds(node: TreeNode<T>): number[] {
-      let result: number[] = [];
+   private collateIds(node: TreeNode<T>): RangedIndexer[] {
+      let result: RangedIndexer[] = [];
 
       // debug diagnostic
       if (!node) {
@@ -893,7 +891,7 @@ class AvlIndex<T> implements IRangedIndex<T> {
       }
 
       // high level verification - retrieve all node ids ordered by their values
-      let result: number[] = this.collateIds(this.nodes[this.apex]);
+      let result: RangedIndexer[] = this.collateIds(this.nodes[this.apex]);
       let nc = Object.keys(this.nodes).length;
       // verify the inorder traversal returned same number of elements as nodes hashmap
       if (result.length !== nc) {
